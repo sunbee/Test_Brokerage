@@ -1,6 +1,10 @@
 #include <Arduino.h>
 
-
+/*
+Display a message received by subscriber to OLED.
+This section has the Adafruit libraries and setup instructions
+in order to use the OLED display.
+*/
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -10,14 +14,30 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
+/*
+Obtain a sensor reading to publish to MQTT broker.
+This section has the instructions to use the sole analog pin
+on the nodemuc. 
+How will the nodemcu recieve inputs from sensors for 
+temperature, moisture, brightness, etc.? We will need a
+multiplexing solution e.g. MCP3008 so multiple sensors can
+be configured to use a single analog pin.
+*/
 int sensorPin = A0;   // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
 
+/*
+Connect to MQTT broker over WiFi (Home Internet).
+This section has the libraries to connect to WiFi and the broker.
+Note that we will use a single nodemcu as publisher and subscriber,
+with a single instance of the Mosquitto client object.
+Adjust TIMER_INTERVAL (in milliseconds) for publishing frequency.
+*/
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
 #include <SECRETS.h>
-#define TIMER_INTERVAL 12000
+#define TIMER_INTERVAL 60000
 #define onboard_led 16
 
 const char* SSID = SECRET_SSID;
@@ -64,7 +84,7 @@ void setup() {
   display.clearDisplay();
   pinMode(onboard_led, OUTPUT);
 
-  // put your setup code here, to run once:
+  // Connect to WiFi:
   Serial.begin(9600);
   WiFi.mode(WIFI_OFF);
   delay(1500);
@@ -78,11 +98,31 @@ void setup() {
   Serial.print("Connected: ");
   Serial.println(SSID);
 
+  /* 
+  Configure the Mosquitto client with the particulars 
+  of the MQTT broker. The client is dual-use as publisher
+  and subscriber.
+  In order to publish, use the 'publish()' method of the 
+  client object. The message will be serialized JSON 
+  containing sensor readings. 
+  In order to listen, subscribe to the topic of interest
+  and handle the message with the callback in event-driven 
+  pattern. 
+  */
   MosquittoClient.setServer(broker_ip, 1883);
   MosquittoClient.setCallback(mosquittoDo);
 }
 
 void reconnect() {
+  /*
+  Connect to the MQTT broker in order to publish a message
+  or listen in on a topic of interest. 
+  The 'connect()' methods wants client credentials. When the
+  MQTT broker is not set up for authentication, we have successfully
+  connected to the MQTT broker using dummy data, passing string literals 
+  for args 'id' and 'user' and NULL for 'pass'.
+  Having connected successully, proceed to publish or listen.
+  */
   while (!MosquittoClient.connected()) {
     if (MosquittoClient.connect("NodeMCU", "fire_up_your_neurons", NULL)) {
       Serial.println("Uh-Kay!");
@@ -95,8 +135,25 @@ void reconnect() {
   }
 }
 
+String makeMessage() {
+  /*
+  Read the pot on A0,
+  then display to OLED
+  using the helper function. 
+  */
+ sensorValue = analogRead(sensorPin);
+ Serial.print("Reading: " + sensorValue);
+ float sensorReading = sensorValue * 100.0 / 1023.0;
+ char sensorDisplay[7];
+ dtostrf(sensorReading, 6, 2, sensorDisplay);
+ char readOut[15];
+ snprintf(readOut, 15, "{\"Pot\":%6s}", sensorDisplay);
+ displayMessage(readOut);
+ return readOut;
+}
+
 void publish_message() {
-  String msg_payload = "Namaste from India";
+  String msg_payload = makeMessage(); // "Namaste from India";
   char char_buffer[999];
   msg_payload.toCharArray(char_buffer, 999);
   MosquittoClient.publish("Test", char_buffer);
