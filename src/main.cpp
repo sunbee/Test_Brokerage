@@ -59,8 +59,6 @@ void displayMessage(String mess) {
   display.setCursor(0,15);
   display.println(mess);
   display.display();
-  // delay(2001);
-  // display.clearDisplay();
 }
 
 void mosquittoDo(char* topic, byte* payload, unsigned int length) {
