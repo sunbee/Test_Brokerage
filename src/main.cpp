@@ -56,14 +56,21 @@ void displayMessage(String mess) {
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(0,14);
+  display.setCursor(0,15);
   display.println(mess);
   display.display();
-  delay(2001);
-  display.clearDisplay();
+  // delay(2001);
+  // display.clearDisplay();
 }
 
 void mosquittoDo(char* topic, byte* payload, unsigned int length) {
+  /*
+  Handle a new message published to the subscribed topic on the 
+  MQTT broker and show in the OLED display.
+  This is the heart of the subscriber, making it so the nodemcu
+  can act upon information, say, to operate a solenoid valve when
+  the mositure sensor indicates dry soil.
+  */
   Serial.print("Got a message in topic ");
   Serial.println(topic);
   Serial.print("Received data: ");
@@ -72,9 +79,9 @@ void mosquittoDo(char* topic, byte* payload, unsigned int length) {
     Serial.print(char(payload[i]));
     message2display[i] = payload[i];
   }
+  Serial.println();
   char message4OLED[length+6]; // 'Got: ' and null terminator.
   snprintf(message4OLED, length+6, "Got: %s", message2display); 
-  Serial.println();
   displayMessage(message4OLED);
 }
 
@@ -154,15 +161,22 @@ String makeMessage() {
 
 void publish_message() {
   String msg_payload = makeMessage(); // "Namaste from India";
-  char char_buffer[999];
-  msg_payload.toCharArray(char_buffer, 999);
+  char char_buffer[128];
+  msg_payload.toCharArray(char_buffer, 128);
   MosquittoClient.publish("Test", char_buffer);
 }
 
 void loop() {
   unsigned long toc = millis();
 
-  // put your main code here, to run repeatedly:
+  /*
+    Lights! Camera! Action!
+    Here is where the action is for publisher and subscriber.
+    Note the use of millis to scheduling the publication of
+    sensor readings to the MQTT broker in a non-blocking way
+    for the listener. The use of 'delay()' would block the 
+    listener, causing events to be missed.  
+  */
   digitalWrite(onboard_led, LOW);
   if (toc - tic > TIMER_INTERVAL) {
     tic = toc;
@@ -171,9 +185,9 @@ void loop() {
       reconnect();
     } else {
       digitalWrite(onboard_led, HIGH);
-      publish_message();
+      publish_message(); // Publisher action
     }
   }
-  MosquittoClient.loop();
+  MosquittoClient.loop(); // Subscriber action
 }
 
