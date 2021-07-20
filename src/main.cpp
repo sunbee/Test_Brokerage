@@ -15,17 +15,16 @@ in order to use the OLED display.
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 /*
-Obtain a sensor reading to publish to MQTT broker.
-This section has the instructions to use the sole analog pin
-on the nodemuc. 
-How will the nodemcu recieve inputs from sensors for 
-temperature, moisture, brightness, etc.? We will need a
-multiplexing solution e.g. MCP3008 so multiple sensors can
-be configured to use a single analog pin.
+Obtain sensor readings to publish to MQTT broker.
+This section has the instructions to use the the MCP3008 
+for upto 8 analog sensors with a nodemcu that has a 
+single analog pin. We have retained the potentiometer 
+wired to A0 for test comparison.
 */
-int sensorPin = A0;   // select the input pin for the potentiometer
-int sensorValue = 0;  // variable to store the value coming from the sensor
-
+#define PIN_POT A0        // input pin for the potentiometer
+#define PIN_WATER_LEVEL 0 // channel on MCP3008 for water level
+int potValue = 0;         // value read from the pot
+int waterLevel = 0;       // value read from water-level sensor
 /*
 Connect to MQTT broker over WiFi (Home Internet).
 This section has the libraries to connect to WiFi and the broker.
@@ -35,6 +34,28 @@ Adjust TIMER_INTERVAL (in milliseconds) for publishing frequency.
 */
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+
+/*
+Obtain analog values from sensors via MCP3008 10-bit analog-to-digital
+convertor (ADC). The connections must be as follows:
+MCP <> ESP8266
+15 <> 3.3V
+14 <> 3.3V
+13 <> GND
+12 <> D5 (CLK)
+11 <> D6 (MISO)
+10 <> D7 (MOSI)
+9  <> D8 (CS)
+8  <> GND
+
+Pin numbering on the MCP3008 is 0-15 with 2 rows of 8 pins on either side 
+is as follows: 
+a.) Pins numbered 0-7 in one row are analog input channels.
+b.) Pins numbered 8-15 in the row across are configuration setting.
+c.) Pins 0 and 15 are at the notch on either side. 
+*/
+#include <Adafruit_MCP3008.h>
+Adafruit_MCP3008 _mcp; // Constructor
 
 #include <SECRETS.h>
 #define TIMER_INTERVAL 60000
@@ -54,9 +75,9 @@ void displayMessage(String mess) {
   The callback is 'mosquittoDo()'.
   */
   display.clearDisplay();
-  display.setTextSize(2);
+  display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(0,15);
+  display.setCursor(0,0);
   display.println(mess);
   display.display();
 }
@@ -84,6 +105,9 @@ void mosquittoDo(char* topic, byte* payload, unsigned int length) {
 }
 
 void setup() {
+  // Initialize the ADC
+  _mcp.begin();
+
   // initialize with the I2C addr 0x3C
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  
   display.clearDisplay();
@@ -143,18 +167,33 @@ void reconnect() {
 String makeMessage() {
   /*
   Read the pot on A0,
-  then display to OLED
-  using the helper function. 
+  then normalize the value
+  and prepare for publishing
+  as serialized JSON. 
   */
- sensorValue = analogRead(sensorPin);
- Serial.print("Reading: " + sensorValue);
- float sensorReading = sensorValue * 100.0 / 1023.0;
- char sensorDisplay[7];
- dtostrf(sensorReading, 6, 2, sensorDisplay);
- char readOut[15];
- snprintf(readOut, 15, "{\"Pot\":%6s}", sensorDisplay);
- displayMessage(readOut);
- return readOut;
+  potValue = analogRead(PIN_POT);
+  Serial.print("Reading: " + potValue);
+  float potReading = potValue * 100.0 / 1023.0;
+  char potDisplay[7];
+  dtostrf(potReading, 6, 2, potDisplay);
+  /*
+  Read the water level on analog channel no. 0
+  on the MCP3008 10-bit ADC using the readADC()
+  method of the _mcp object and passing the 
+  channel no. (on MCP).
+  */
+  waterLevel = _mcp.readADC(PIN_WATER_LEVEL);
+  float waterLevelReading = waterLevel * 100.0 / 1023.0;
+  char waterLevelDisplay[7];
+  dtostrf(waterLevelReading, 6, 2, waterLevelDisplay);
+  /*
+  Make the message to publish to the MQTT broker as
+  serialized JSON. 
+  */
+  char readOut[30];
+  snprintf(readOut, 30, "{\"Pot\":%6s,\"Level\":%6s}", potDisplay, waterLevelDisplay);
+  displayMessage(readOut);
+  return readOut;
 }
 
 void publish_message() {
