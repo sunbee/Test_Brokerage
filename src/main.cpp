@@ -75,7 +75,7 @@ void displayMessage(String mess) {
   The callback is 'mosquittoDo()'.
   */
   display.clearDisplay();
-  display.setTextSize(1);
+  display.setTextSize(1.5);
   display.setTextColor(WHITE);
   display.setCursor(0,0);
   display.println(mess);
