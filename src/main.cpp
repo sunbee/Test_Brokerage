@@ -21,10 +21,10 @@ for upto 8 analog sensors with a nodemcu that has a
 single analog pin. We have retained the potentiometer 
 wired to A0 for test comparison.
 */
-#define PIN_POT A0        // input pin for the potentiometer
-#define PIN_WATER_LEVEL 0 // channel on MCP3008 for water level
-int potValue = 0;         // value read from the pot
-int waterLevel = 0;       // value read from water-level sensor
+#define PIN_POT A0        // Input pin for the potentiometer
+#define PIN_WATER_LEVEL 0 // Channel on MCP3008 for water level
+int potValue = 0;         // Value read from the pot
+int waterLevel = 0;       // Value read from water-level sensor
 /*
 Connect to MQTT broker over WiFi (Home Internet).
 This section has the libraries to connect to WiFi and the broker.
