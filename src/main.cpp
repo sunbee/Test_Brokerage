@@ -1,6 +1,14 @@
 #include <Arduino.h>
 
 /*
+Obtain brightness readings (lux) using TSL2591 sensor
+and publish to MQTT broker.
+*/
+#include <Adafruit_Sensor.h>
+#include <Adafruit_TSL2591.h>
+
+Adafruit_TSL2591 _tsl(2591);
+/*
 Display a message received by subscriber to OLED.
 This section has the Adafruit libraries and setup instructions
 in order to use the OLED display.
@@ -13,18 +21,21 @@ in order to use the OLED display.
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+uint16_t brightness = 0;
 
 /*
 Obtain sensor readings to publish to MQTT broker.
 This section has the instructions to use the the MCP3008 
-for upto 8 analog sensors with a nodemcu that has a 
-single analog pin. We have retained the potentiometer 
+10-bit analog-to-digital converter for adding upto 
+8 analog sensors to a nodemcu, circumventng the limitation 
+of a single analog pin. We have retained the potentiometer 
 wired to A0 for test comparison.
 */
 #define PIN_POT A0        // Input pin for the potentiometer
 #define PIN_WATER_LEVEL 0 // Channel on MCP3008 for water level
 int potValue = 0;         // Value read from the pot
 int waterLevel = 0;       // Value read from water-level sensor
+
 /*
 Connect to MQTT broker over WiFi (Home Internet).
 This section has the libraries to connect to WiFi and the broker.
@@ -51,14 +62,14 @@ MCP <> ESP8266
 Pin numbering on the MCP3008 is 0-15 with 2 rows of 8 pins on either side 
 is as follows: 
 a.) Pins numbered 0-7 in one row are analog input channels.
-b.) Pins numbered 8-15 in the row across are configuration setting.
+b.) Pins numbered 8-15 in the row across are power and communications bus.
 c.) Pins 0 and 15 are at the notch on either side. 
 */
 #include <Adafruit_MCP3008.h>
 Adafruit_MCP3008 _mcp; // Constructor
 
 #include <SECRETS.h>
-#define TIMER_INTERVAL 60000
+#define TIMER_INTERVAL 120000
 #define onboard_led 16
 
 const char* SSID = SECRET_SSID;
@@ -68,6 +79,14 @@ unsigned long tic = millis();
 
 WiFiClient WiFiClient;
 PubSubClient MosquittoClient(WiFiClient);
+
+void configureLuxMeter() {
+  /*
+  COnfigure the TSL2591 lux sensor for use.
+  */
+  _tsl.setGain(TSL2591_GAIN_MED);
+  _tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+}
 
 void displayMessage(String mess) {
   /*
@@ -105,16 +124,26 @@ void mosquittoDo(char* topic, byte* payload, unsigned int length) {
 }
 
 void setup() {
-  // Initialize the ADC
+  // Start the serial bus
+  Serial.begin(9600);
+
+  // Start the lux sensor
+  if (_tsl.begin()) {
+    Serial.println("Sensor ready!");
+  } else {
+    Serial.println("Found no sensor.");
+  }
+  configureLuxMeter();
+
+  // Start the ADC
   _mcp.begin();
 
-  // initialize with the I2C addr 0x3C
+  // Start the display at I2C addr 0x3C
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  
   display.clearDisplay();
   pinMode(onboard_led, OUTPUT);
 
   // Connect to WiFi:
-  Serial.begin(9600);
   WiFi.mode(WIFI_OFF);
   delay(1500);
   WiFi.mode(WIFI_STA);
@@ -151,9 +180,12 @@ void reconnect() {
   connected to the MQTT broker using dummy data, passing string literals 
   for args 'id' and 'user' and NULL for 'pass'.
   Having connected successully, proceed to publish or listen.
+  Use connection string as follows:
+  1. "NodeMCU1", "fire_up_your_neurons", NULL
+  2. "NodeMCU2", "whatsup_nerds", NULL
   */
   while (!MosquittoClient.connected()) {
-    if (MosquittoClient.connect("NodeMCU", "fire_up_your_neurons", NULL)) {
+    if (MosquittoClient.connect("NodeMCU2", "whatsup_nerds", NULL)) {
       Serial.println("Uh-Kay!");
       MosquittoClient.subscribe("Test"); // SUBSCRIBE TO TOPIC
     } else {
@@ -187,11 +219,18 @@ String makeMessage() {
   char waterLevelDisplay[7];
   dtostrf(waterLevelReading, 6, 2, waterLevelDisplay);
   /*
+  Read the brightness level reported by TSL2591X on I2C bus.
+  */
+  brightness = _tsl.getLuminosity(TSL2591_VISIBLE);
+  float brightnessReading = brightness * 100.0 / 65535.0;
+  char brightnessDisplay[7];
+  dtostrf(brightnessReading, 6, 2, brightnessDisplay);
+  /*
   Make the message to publish to the MQTT broker as
   serialized JSON. 
   */
-  char readOut[30];
-  snprintf(readOut, 30, "{\"Pot\":%6s,\"Level\":%6s}", potDisplay, waterLevelDisplay);
+  char readOut[43];
+  snprintf(readOut, 43, "{\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", potDisplay, waterLevelDisplay, brightnessDisplay);
   displayMessage(readOut);
   return readOut;
 }
