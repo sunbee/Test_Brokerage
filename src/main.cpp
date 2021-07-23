@@ -232,7 +232,7 @@ String makeMessage() {
   char readOut[43];
   snprintf(readOut, 43, "{\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", potDisplay, waterLevelDisplay, brightnessDisplay);
   displayMessage(readOut);
-  return readOut;
+  return readOut; // Note 128 char limit on messages.
 }
 
 void publish_message() {
