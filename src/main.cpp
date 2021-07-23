@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+String nodeName = "BHRIGU"; // 6 char EXACTLY
+
 /*
 Obtain brightness readings (lux) using TSL2591 sensor
 and publish to MQTT broker.
@@ -175,17 +177,17 @@ void reconnect() {
   /*
   Connect to the MQTT broker in order to publish a message
   or listen in on a topic of interest. 
-  The 'connect()' methods wants client credentials. When the
-  MQTT broker is not set up for authentication, we have successfully
-  connected to the MQTT broker using dummy data, passing string literals 
-  for args 'id' and 'user' and NULL for 'pass'.
+  The 'connect()' methods wants client credentials. 
+  When the MQTT broker is not setup for authentication, 
+  we have successfully connected to the MQTT broker 
+  passing string literals for args 'id' and 'user' and NULL for 'pass'.
   Having connected successully, proceed to publish or listen.
   Use connection string as follows:
-  1. "NodeMCU1", "fire_up_your_neurons", NULL
-  2. "NodeMCU2", "whatsup_nerds", NULL
+  1. "BHRIGU", "fire_up_your_neurons", NULL
+  2. "VASISH", "whatsup_nerds", NULL
   */
   while (!MosquittoClient.connected()) {
-    if (MosquittoClient.connect("NodeMCU2", "whatsup_nerds", NULL)) {
+    if (MosquittoClient.connect("BHRIGU", "whatsup_nerds", NULL)) {
       Serial.println("Uh-Kay!");
       MosquittoClient.subscribe("Test"); // SUBSCRIBE TO TOPIC
     } else {
@@ -198,7 +200,7 @@ void reconnect() {
 
 String makeMessage() {
   /*
-  Read the pot on A0,
+  Read the pot on A0, 
   then normalize the value
   and prepare for publishing
   as serialized JSON. 
@@ -210,9 +212,9 @@ String makeMessage() {
   dtostrf(potReading, 6, 2, potDisplay);
   /*
   Read the water level on analog channel no. 0
-  on the MCP3008 10-bit ADC using the readADC()
+  of the MCP3008 10-bit ADC using the readADC()
   method of the _mcp object and passing the 
-  channel no. (on MCP).
+  channel no. (ref. MCP).
   */
   waterLevel = _mcp.readADC(PIN_WATER_LEVEL);
   float waterLevelReading = waterLevel * 100.0 / 1023.0;
@@ -229,8 +231,8 @@ String makeMessage() {
   Make the message to publish to the MQTT broker as
   serialized JSON. 
   */
-  char readOut[43];
-  snprintf(readOut, 43, "{\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", potDisplay, waterLevelDisplay, brightnessDisplay);
+  char readOut[60];
+  snprintf(readOut, 60, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay);
   displayMessage(readOut);
   return readOut; // Note 128 char limit on messages.
 }
@@ -249,9 +251,9 @@ void loop() {
     Lights! Camera! Action!
     Here is where the action is for publisher and subscriber.
     Note the use of millis to scheduling the publication of
-    sensor readings to the MQTT broker in a non-blocking way
-    for the listener. The use of 'delay()' would block the 
-    listener, causing events to be missed.  
+    sensor readings to the MQTT broker in a non-blocking way. 
+    The use of 'delay()' would block the listener, 
+    causing events to be missed.  
   */
   digitalWrite(onboard_led, LOW);
   if (toc - tic > TIMER_INTERVAL) {
