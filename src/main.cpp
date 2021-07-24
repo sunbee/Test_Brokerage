@@ -75,6 +75,7 @@ Adafruit_MCP3008 _mcp; // Constructor
 #define TIMER_INTERVAL_MIN 2000   // 2 seconds
 #define TIMER_INTERVAL_MAX 180000 // 3 minutes
 #define onboard_led 16
+unsigned long timerInterval = TIMER_INTERVAL;
 
 const char* SSID = SECRET_SSID;
 const char* PASS = SECRET_PASS;
@@ -168,7 +169,7 @@ void setup() {
   client object. The message will be serialized JSON 
   containing sensor readings. 
   In order to listen, subscribe to the topic of interest
-  and handle the message with the callback in event-driven 
+  and handle the me  unsigned long timerInterval = TIMER_INTERVAL;ssage with the callback in event-driven 
   pattern. 
   */
   MosquittoClient.setServer(broker_ip, 1883);
@@ -179,7 +180,7 @@ void reconnect() {
   /*
   Connect to the MQTT broker in order to publish a message
   or listen in on a topic of interest. 
-  The 'connect()' methods wants client credentials. 
+  The 'connect()' m  unsigned long timerInterval = TIMER_INTERVAL;ethods wants client credentials. 
   When the MQTT broker is not setup for authentication, 
   we have successfully connected to the MQTT broker 
   passing string literals for args 'id' and 'user' and NULL for 'pass'.
@@ -258,7 +259,6 @@ void loop() {
     causing events to be missed.  
   */
   digitalWrite(onboard_led, LOW);  
-  unsigned long timerInterval = TIMER_INTERVAL;
   timerInterval = map(analogRead(PIN_POT), 0, 1023, TIMER_INTERVAL_MIN, TIMER_INTERVAL_MAX);
   if (toc - tic > timerInterval) {
     tic = toc;
