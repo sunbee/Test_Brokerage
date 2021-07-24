@@ -17,6 +17,7 @@ SensorArray _sensorArray; // Array of sensors
 uint16_t brightness = 0;  // Value read from lux sensor
 int waterLevel = 0;       // Value read from water-level sensor
 int potValue;             // Value read from the pot
+float tempInC;            // Temperature read from ds18b20 "Dallas"
 
 /*
 Connect to MQTT broker over WiFi (Home Internet).
@@ -68,6 +69,9 @@ void setup() {
     // Stabilize the serial commuincations bus.
   }
   delay(999);
+  // Start the temperature sensor (Dallas)
+  _sensorArray.start_ds18b20(DALLAS_TEMPERATURE);
+
   // Start the lux sensor
   _sensorArray.start_tsl();
   // Start the ADC
@@ -150,11 +154,17 @@ String makeMessage() {
   char brightnessDisplay[7];
   dtostrf(brightness, 6, 2, brightnessDisplay);
   /*
+  Read the temperature reported by dsa8b20 "Dallas" on one-wire.
+  */
+  tempInC = _sensorArray.get_ds18b20_temperature(CELSIUS);
+  char tempInCDisplay[7];
+  dtostrf(tempInC, 6, 2, tempInCDisplay); 
+  /*
   Make the message to publish to the MQTT broker as
   serialized JSON. 
   */
-  char readOut[60];
-  snprintf(readOut, 60, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay);
+  char readOut[78];
+  snprintf(readOut, 78, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s,\"TempC\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay, tempInCDisplay);
   _sensorArray.displayMessage(readOut);
   return readOut; // Note 128 char limit on messages.
 }
@@ -168,7 +178,6 @@ void publish_message() {
 
 void loop() {
   unsigned long toc = millis();
-
   /*
     Lights! Camera! Action!
     Here is where the action is for publisher and subscriber.

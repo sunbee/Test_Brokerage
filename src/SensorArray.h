@@ -1,6 +1,9 @@
 #ifndef SENSOR_ARRAY_H
 #define SENSOR_ARRAY_H
 
+#include <DallasTemperature.h>
+#include "Temperature.h"
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -14,11 +17,13 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_TSL2591.h>
 
-
 class SensorArray 
 {
     public:
         SensorArray();
+
+        void start_ds18b20(uint8_t);
+        float get_ds18b20_temperature(enum temperatureUnit);
 
         void start_display();
         void displayMessage(String="Namaste ji!");
@@ -32,7 +37,12 @@ class SensorArray
         uint16_t get_tsl_fullSpectrum(bool=false);
         uint32_t get_tsl_luminosity(bool=true);
         float get_tsl_lux(bool=true);
+
     private:
+        Temperature _temperature;
+        OneWire _oneWire = OneWire(0);
+        DallasTemperature _ds18b20 = DallasTemperature();
+
         Adafruit_SSD1306 _display = Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
         int _last_waterLevel;
@@ -77,4 +87,10 @@ c.) Pins 0 and 15 are at the notch on either side.
 Display a message received by subscriber to OLED.
 This section has the Adafruit libraries and setup instructions
 in order to use the OLED display.
+*/
+
+/*
+Obtain temperature readings from the ds18b20 "Dallas" temperature sensor
+over the one-wire protocol. This protocol requires only a digital pin and
+we have used pin D3 (GPIO0) on the nodemcu.
 */

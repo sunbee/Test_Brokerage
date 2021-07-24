@@ -7,6 +7,23 @@ SensorArray::SensorArray() {
 
 };
 
+void SensorArray::start_ds18b20(uint8_t temperaturePin) {
+    this->_oneWire.begin(temperaturePin);
+    this->_ds18b20.setOneWire(&this->_oneWire);
+    this->_ds18b20.begin();
+}
+
+float SensorArray::get_ds18b20_temperature(enum temperatureUnit unit) {
+    float returnValue = 0.0;
+
+    this->_ds18b20.requestTemperatures();
+    returnValue = this->_ds18b20.getTempCByIndex(0);
+    if (unit == FAHRENHEIT) {
+        returnValue = this->_temperature.convertCtoF(returnValue);
+    }
+    return returnValue;
+}
+
 void SensorArray::start_display() {
     _display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
     _display.clearDisplay();
