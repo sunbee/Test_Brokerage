@@ -132,19 +132,13 @@ void reconnect() {
 
 String makeMessage() {
   /*
-  Read the pot on A0, 6000
-  then normalize the value
-  and prepare for publishing
-  as serialized JSON. 
+  Read the pot on A0. 
   */
   potValue = analogRead(PIN_POT);
   char potDisplay[7];
   dtostrf(potValue, 4, 0, potDisplay);
   /*
-  Read the water level on analog channel no. 0
-  of the MCP3008 10-bit ADC using the readADC()
-  method of the _mcp object and passing the 
-  channel no. (ref. MCP).
+  Read the water level on analog channel no. 0 of the MCP3008 10-bit ADC. 
   */
   waterLevel = _sensorArray.get_mcp_waterLevel(PIN_WATER_LEVEL, true);
   char waterLevelDisplay[7];
