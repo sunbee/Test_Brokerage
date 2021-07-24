@@ -71,7 +71,7 @@ uint32_t SensorArray::get_tsl_luminosity(bool liveReading) {
     Take a live reading, otherwise report last read value.
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
    }
    return this->_last_tsl_luminosity;
 
@@ -87,7 +87,7 @@ uint16_t SensorArray::get_tsl_IR(bool liveReading) {
     compute 16-bit IR, Full or Visible spectrum result. 
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
    }
    return this->_tsl.getLuminosity(TSL2591_INFRARED);
 }
@@ -99,7 +99,7 @@ uint16_t SensorArray::get_tsl_fullSpectrum(bool liveReading) {
     from 32-bit full luminosity.
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
    }
    return this->_tsl.getLuminosity(TSL2591_FULLSPECTRUM);
 }
@@ -116,4 +116,9 @@ uint16_t SensorArray::get_tsl_visibleLight(bool liveReading) {
     return this->_tsl.getLuminosity(TSL2591_VISIBLE);
 }
 
-
+float SensorArray::get_tsl_lux(bool liveReading) {
+    if (liveReading) {
+        this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
+    }
+    return this->_tsl.calculateLux(this->get_tsl_fullSpectrum(liveReading), this->get_tsl_IR(liveReading));
+}

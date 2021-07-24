@@ -27,7 +27,6 @@ wired to A0 for test comparison.
 #define PIN_POT A0        // Input pin for the potentiometer
 int potValue;         // Value read from the pot
 
-
 /*
 Connect to MQTT broker over WiFi (Home Internet).
 This section has the libraries to connect to WiFi and the broker.
@@ -77,19 +76,15 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) {
     // Stabilize the serial commuincations bus.
-
   }
   delay(999);
   // Start the lux sensor
   _sensorArray.start_tsl();
-
   // Start the ADC
   _sensorArray.start_mcp();
-
   // Start the display at I2C addr 0x3C
   _sensorArray.start_display();
 
-  
   pinMode(onboard_led, OUTPUT);
 
   // Connect to WiFi:
@@ -134,7 +129,7 @@ void reconnect() {
   2. "VASISH", "whatsup_nerds", NULL
   */
   while (!MosquittoClient.connected()) {
-    if (MosquittoClient.connect("nodemcu1", "fire_up_your_neurons", NULL)) {
+    if (MosquittoClient.connect("BHRIGU", "fire_up_your_neurons", NULL)) {
       Serial.println("Uh-Kay!");
       MosquittoClient.subscribe("Test"); // SUBSCRIBE TO TOPIC
     } else {
@@ -164,17 +159,14 @@ String makeMessage() {
   channel no. (ref. MCP).
   */
   waterLevel = _sensorArray.get_mcp_waterLevel(PIN_WATER_LEVEL, true);
-  float waterLevelReading = waterLevel * 100.0 / 1023.0;
   char waterLevelDisplay[7];
-  dtostrf(waterLevelReading, 6, 2, waterLevelDisplay);
+  dtostrf(waterLevel, 6, 0, waterLevelDisplay);
   /*
   Read the brightness level reported by TSL2591X on I2C bus.
   */
-  brightness = _sensorArray.get_tsl_visibleLight();
-  Serial.println(brightness);
-  float brightnessReading = brightness * 100.0 / 65535.0;
+  brightness = _sensorArray.get_tsl_lux();
   char brightnessDisplay[7];
-  dtostrf(brightnessReading, 6, 2, brightnessDisplay);
+  dtostrf(brightness, 6, 2, brightnessDisplay);
   /*
   Make the message to publish to the MQTT broker as
   serialized JSON. 

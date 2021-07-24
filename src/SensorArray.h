@@ -31,6 +31,7 @@ class SensorArray
         uint16_t get_tsl_IR(bool=false);
         uint16_t get_tsl_fullSpectrum(bool=false);
         uint32_t get_tsl_luminosity(bool=true);
+        float get_tsl_lux(bool=true);
     private:
         Adafruit_SSD1306 _display = Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
