@@ -72,6 +72,8 @@ Adafruit_MCP3008 _mcp; // Constructor
 
 #include <SECRETS.h>
 #define TIMER_INTERVAL 120000
+#define TIMER_INTERVAL_MIN 2000   // 2 seconds
+#define TIMER_INTERVAL_MAX 180000 // 3 minutes
 #define onboard_led 16
 
 const char* SSID = SECRET_SSID;
@@ -255,8 +257,10 @@ void loop() {
     The use of 'delay()' would block the listener, 
     causing events to be missed.  
   */
-  digitalWrite(onboard_led, LOW);
-  if (toc - tic > TIMER_INTERVAL) {
+  digitalWrite(onboard_led, LOW);  
+  unsigned long timerInterval = TIMER_INTERVAL;
+  timerInterval = map(analogRead(PIN_POT), 0, 1023, TIMER_INTERVAL_MIN, TIMER_INTERVAL_MAX);
+  if (toc - tic > timerInterval) {
     tic = toc;
     if (!MosquittoClient.connected()) {
       Serial.println("Made no MQTT connection.");
