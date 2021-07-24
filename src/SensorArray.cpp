@@ -7,7 +7,43 @@ SensorArray::SensorArray() {
 
 };
 
+void SensorArray::start_display() {
+    _display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    _display.clearDisplay();
+
+}
+
+void SensorArray::displayMessage(String mess) {
+  /*
+  Use in the callback for MQTT subscriber.
+  The callback is 'mosquittoDo()'.
+  */
+  this->_display.clearDisplay();
+  this->_display.setTextSize(1.5);
+  this->_display.setTextColor(WHITE);
+  this->_display.setCursor(0,0);
+  this->_display.println(mess);
+  this->_display.display();
+}
+
+void SensorArray::start_mcp() {
+    this->_mcp.begin();
+}
+
+int SensorArray::get_mcp_waterLevel(uint8_t channel_waterLevel, bool liveReading) {
+    if (liveReading) {
+        this->_last_waterLevel = this->_mcp.readADC(channel_waterLevel);
+    }
+    return this->_last_waterLevel;
+}
+
 void SensorArray::start_tsl() {
+    if (this->_tsl.begin()) {
+        Serial.println("Sensor armed!");
+    } else {
+        Serial.println("Found no lux sensor!");
+    };
+
     /*
     Configure the gain for the TSL2591 sensor:
     TSL2591_GAIN_LOW: Sets the gain to 1x (bright light)
@@ -28,7 +64,6 @@ void SensorArray::start_tsl() {
     */
     this->_tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
 
-    this->_tsl.begin();
 };
 
 uint32_t SensorArray::get_tsl_luminosity(bool liveReading) {
@@ -36,7 +71,7 @@ uint32_t SensorArray::get_tsl_luminosity(bool liveReading) {
     Take a live reading, otherwise report last read value.
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
    }
    return this->_last_tsl_luminosity;
 
@@ -45,28 +80,40 @@ uint32_t SensorArray::get_tsl_luminosity(bool liveReading) {
 uint16_t SensorArray::get_tsl_IR(bool liveReading) {
     /*
     Take a live reading, otherwise report last read value.
+    Ignore until we have figured out how to derive this result
+    from 32-bit full luminosity. Per documentation, the 32-bit
+    full luminosity has low word for IR and high word for full 
+    spectrum. This would indicate shifting or masking bits to 
+    compute 16-bit IR, Full or Visible spectrum result. 
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
    }
-   return this->_last_tsl_luminosity >> 16;
+   return this->_tsl.getLuminosity(TSL2591_INFRARED);
 }
 
 uint16_t SensorArray::get_tsl_fullSpectrum(bool liveReading) {
     /*
     Take a live reading, otherwise report last read value.
+    Ignore until we have figured out how to derive this result
+    from 32-bit full luminosity.
     */
    if (liveReading) {
-       this->_last_tsl_luminosity = this->_tsl.getFullLuminosity();
+       this->_last_tsl_luminosity = _tsl.getFullLuminosity();
    }
-   return this->_last_tsl_luminosity & 0xFFFF;
+   return this->_tsl.getLuminosity(TSL2591_FULLSPECTRUM);
 }
 
 uint16_t SensorArray::get_tsl_visibleLight(bool liveReading) {
     /*
     Take a live reading, otherwise report last read value.
+    Ignore until we have figured out how to derive this result
+    from 32-bit full luminosity.
     */
-    return this->get_tsl_fullSpectrum(liveReading) - this->get_tsl_IR(liveReading);
+   if (liveReading) {
+       this->get_tsl_fullSpectrum(liveReading) - this->get_tsl_IR(liveReading);
+   }
+    return this->_tsl.getLuminosity(TSL2591_VISIBLE);
 }
 
 

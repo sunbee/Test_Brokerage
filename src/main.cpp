@@ -1,32 +1,20 @@
 #include <Arduino.h>
 
-#include "SensorArray.h"
-
 String nodeName = "BHRIGU"; // 6 char EXACTLY
 
-SensorArray _sensorArray;
+
 /*
 Obtain brightness readings (lux) using TSL2591 sensor
 and publish to MQTT broker.
 */
-#include <Adafruit_Sensor.h>
-#include <Adafruit_TSL2591.h>
+#include "SensorArray.h"
 
-///////// Adafruit_TSL2591 _tsl(2591);
-/*
-Display a message received by subscriber to OLED.
-This section has the Adafruit libraries and setup instructions
-in order to use the OLED display.
-*/
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+SensorArray _sensorArray;
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define PIN_WATER_LEVEL 0 // Channel on MCP3008 for water level
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-uint16_t brightness = 0;
+uint16_t brightness = 0;  // Value read from lux sensor
+int waterLevel = 0;       // Value read from water-level sensor
 
 /*
 Obtain sensor readings to publish to MQTT broker.
@@ -37,9 +25,8 @@ of a single analog pin. We have retained the potentiometer
 wired to A0 for test comparison.
 */
 #define PIN_POT A0        // Input pin for the potentiometer
-#define PIN_WATER_LEVEL 0 // Channel on MCP3008 for water level
-int potValue = 0;         // Value read from the pot
-int waterLevel = 0;       // Value read from water-level sensor
+int potValue;         // Value read from the pot
+
 
 /*
 Connect to MQTT broker over WiFi (Home Internet).
@@ -51,34 +38,9 @@ Adjust TIMER_INTERVAL (in milliseconds) for publishing frequency.
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-/*
-Obtain analog values from sensors via MCP3008 10-bit analog-to-digital
-convertor (ADC). The connections must be as follows:
-MCP <> ESP8266
-15 <> 3.3V
-14 <> 3.3V
-13 <> GND
-12 <> D5 (CLK)
-11 <> D6 (MISO)
-10 <> D7 (MOSI)
-9  <> D8 (CS)
-8  <> GND
-
-Pin numbering on the MCP3008 is 0-15 with 2 rows of 8 pins on either side 
-is as follows: 
-a.) Pins numbered 0-7 in one row are analog input channels.
-b.) Pins numbered 8-15 in the row across are power and communications bus.
-c.) Pins 0 and 15 are at the notch on either side. 
-*/
-#include <Adafruit_MCP3008.h>
-Adafruit_MCP3008 _mcp; // Constructor
-
 #include <SECRETS.h>
-#define TIMER_INTERVAL 120000
-#define TIMER_INTERVAL_MIN 2000   // 2 seconds
-#define TIMER_INTERVAL_MAX 180000 // 3 minutes
+#define TIMER_INTERVAL 6000
 #define onboard_led 16
-unsigned long timerInterval = TIMER_INTERVAL;
 
 const char* SSID = SECRET_SSID;
 const char* PASS = SECRET_PASS;
@@ -87,27 +49,6 @@ unsigned long tic = millis();
 
 WiFiClient WiFiClient;
 PubSubClient MosquittoClient(WiFiClient);
-
-// void configureLuxMeter() {
-//   /*
-//   COnfigure the TSL2591 lux sensor for use.
-//   */
-//   _tsl.setGain(TSL2591_GAIN_MED);
-//   _tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
-// }
-
-void displayMessage(String mess) {
-  /*
-  Use in the callback for MQTT subscriber.
-  The callback is 'mosquittoDo()'.
-  */
-  display.clearDisplay();
-  display.setTextSize(1.5);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println(mess);
-  display.display();
-}
 
 void mosquittoDo(char* topic, byte* payload, unsigned int length) {
   /*
@@ -128,7 +69,7 @@ void mosquittoDo(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   char message4OLED[length+6]; // 'Got: ' and null terminator.
   snprintf(message4OLED, length+6, "Got: %s", message2display); 
-  displayMessage(message4OLED);
+  _sensorArray.displayMessage(message4OLED);
 }
 
 void setup() {
@@ -141,19 +82,14 @@ void setup() {
   delay(999);
   // Start the lux sensor
   _sensorArray.start_tsl();
-  // if (_tsl.begin()) {
-  //   Serial.println("Sensor ready!");
-  // } else {
-  //   Serial.println("Found no sensor.");
-  // }
-  // configureLuxMeter();
 
   // Start the ADC
-  _mcp.begin();
+  _sensorArray.start_mcp();
 
   // Start the display at I2C addr 0x3C
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  
-  display.clearDisplay();
+  _sensorArray.start_display();
+
+  
   pinMode(onboard_led, OUTPUT);
 
   // Connect to WiFi:
@@ -211,7 +147,7 @@ void reconnect() {
 
 String makeMessage() {
   /*
-  Read the pot on A0, 
+  Read the pot on A0, 6000
   then normalize the value
   and prepare for publishing
   as serialized JSON. 
@@ -227,15 +163,15 @@ String makeMessage() {
   method of the _mcp object and passing the 
   channel no. (ref. MCP).
   */
-  waterLevel = _mcp.readADC(PIN_WATER_LEVEL);
+  waterLevel = _sensorArray.get_mcp_waterLevel(PIN_WATER_LEVEL, true);
   float waterLevelReading = waterLevel * 100.0 / 1023.0;
   char waterLevelDisplay[7];
   dtostrf(waterLevelReading, 6, 2, waterLevelDisplay);
   /*
   Read the brightness level reported by TSL2591X on I2C bus.
   */
-  // brightness = _tsl.getLuminosity(TSL2591_VISIBLE);
-  brightness = _sensorArray.get_tsl_visibleLight(true);
+  brightness = _sensorArray.get_tsl_visibleLight();
+  Serial.println(brightness);
   float brightnessReading = brightness * 100.0 / 65535.0;
   char brightnessDisplay[7];
   dtostrf(brightnessReading, 6, 2, brightnessDisplay);
@@ -245,12 +181,12 @@ String makeMessage() {
   */
   char readOut[60];
   snprintf(readOut, 60, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay);
-  displayMessage(readOut);
+  _sensorArray.displayMessage(readOut);
   return readOut; // Note 128 char limit on messages.
 }
 
 void publish_message() {
-  String msg_payload = "Namaste!"; // makeMessage(); // "Namaste from India";
+  String msg_payload = makeMessage(); // "Namaste from India";
   char char_buffer[128];
   msg_payload.toCharArray(char_buffer, 128);
   MosquittoClient.publish("Test", char_buffer);
@@ -268,8 +204,7 @@ void loop() {
     causing events to be missed.  
   */
   digitalWrite(onboard_led, LOW);  
-  timerInterval = map(analogRead(PIN_POT), 0, 1023, TIMER_INTERVAL_MIN, TIMER_INTERVAL_MAX);
-  if (toc - tic > timerInterval) {
+  if (toc - tic > TIMER_INTERVAL) {
     tic = toc;
     if (!MosquittoClient.connected()) {
       Serial.println("Made no MQTT connection.");
