@@ -74,7 +74,6 @@ void setup() {
   delay(999);
   // Start the temperature sensor (Dallas)
   _sensorArray.start_ds18b20(DALLAS_TEMPERATURE);
-
   // Start the lux sensor
   _sensorArray.start_tsl();
   // Start the ADC
