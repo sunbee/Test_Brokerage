@@ -45,6 +45,15 @@ class SensorArray
 #endif
 
 /*
+Obtain sensor readings to publish to MQTT broker.
+This section has the instructions to use the the MCP3008 
+10-bit analog-to-digital converter for adding upto 
+8 analog sensors to a nodemcu, circumventng the limitation 
+of a single analog pin. We have retained the potentiometer 
+wired to A0 for test comparison.
+*/
+
+/*
 Obtain analog values from sensors via MCP3008 10-bit analog-to-digital
 convertor (ADC). The connections must be as follows:
 MCP <> ESP8266

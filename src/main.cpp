@@ -2,30 +2,21 @@
 
 String nodeName = "BHRIGU"; // 6 char EXACTLY
 
-
 /*
-Obtain brightness readings (lux) using TSL2591 sensor
+Obtain sensor readings using the following:
+1. TSL2591 sensor for brightness
+2. MCP3008 for analogue sensors - water level
+3. SSD1306 OLED display at 0x39
 and publish to MQTT broker.
 */
+#include "PinNumbers.h"
 #include "SensorArray.h"
 
-SensorArray _sensorArray;
-
-#define PIN_WATER_LEVEL 0 // Channel on MCP3008 for water level
+SensorArray _sensorArray; // Array of sensors
 
 uint16_t brightness = 0;  // Value read from lux sensor
 int waterLevel = 0;       // Value read from water-level sensor
-
-/*
-Obtain sensor readings to publish to MQTT broker.
-This section has the instructions to use the the MCP3008 
-10-bit analog-to-digital converter for adding upto 
-8 analog sensors to a nodemcu, circumventng the limitation 
-of a single analog pin. We have retained the potentiometer 
-wired to A0 for test comparison.
-*/
-#define PIN_POT A0        // Input pin for the potentiometer
-int potValue;         // Value read from the pot
+int potValue;             // Value read from the pot
 
 /*
 Connect to MQTT broker over WiFi (Home Internet).
@@ -39,7 +30,6 @@ Adjust TIMER_INTERVAL (in milliseconds) for publishing frequency.
 
 #include <SECRETS.h>
 #define TIMER_INTERVAL 6000
-#define onboard_led 16
 
 const char* SSID = SECRET_SSID;
 const char* PASS = SECRET_PASS;
@@ -148,10 +138,8 @@ String makeMessage() {
   as serialized JSON. 
   */
   potValue = analogRead(PIN_POT);
-  Serial.print("Reading: " + potValue);
-  float potReading = potValue * 100.0 / 1023.0;
   char potDisplay[7];
-  dtostrf(potReading, 6, 2, potDisplay);
+  dtostrf(potValue, 4, 0, potDisplay);
   /*
   Read the water level on analog channel no. 0
   of the MCP3008 10-bit ADC using the readADC()
@@ -160,7 +148,7 @@ String makeMessage() {
   */
   waterLevel = _sensorArray.get_mcp_waterLevel(PIN_WATER_LEVEL, true);
   char waterLevelDisplay[7];
-  dtostrf(waterLevel, 6, 0, waterLevelDisplay);
+  dtostrf(waterLevel, 4, 0, waterLevelDisplay);
   /*
   Read the brightness level reported by TSL2591X on I2C bus.
   */
