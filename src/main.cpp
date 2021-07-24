@@ -18,6 +18,7 @@ uint16_t brightness = 0;  // Value read from lux sensor
 int waterLevel = 0;       // Value read from water-level sensor
 int potValue;             // Value read from the pot
 float tempInC;            // Temperature read from ds18b20 "Dallas"
+int pubInterval;          // Time interval for recurring writes to broker
 
 /*
 Connect to MQTT broker over WiFi (Home Internet).
@@ -30,7 +31,9 @@ Adjust TIMER_INTERVAL (in milliseconds) for publishing frequency.
 #include <PubSubClient.h>
 
 #include <SECRETS.h>
-#define TIMER_INTERVAL 6000
+#define TIMER_INTERVAL  6000     // 6 seconds
+#define TIMER_MIN       2000     // 2 seconds MIN
+#define TIMER_MAX       180000   // 3 minutes MAX
 
 const char* SSID = SECRET_SSID;
 const char* PASS = SECRET_PASS;
@@ -187,7 +190,8 @@ void loop() {
     causing events to be missed.  
   */
   digitalWrite(onboard_led, LOW);  
-  if (toc - tic > TIMER_INTERVAL) {
+  pubInterval = map(potValue, 0, 1023, TIMER_MIN, TIMER_MAX);
+  if (toc - tic > pubInterval) {
     tic = toc;
     if (!MosquittoClient.connected()) {
       Serial.println("Made no MQTT connection.");
