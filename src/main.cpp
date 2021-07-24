@@ -1,7 +1,10 @@
 #include <Arduino.h>
 
+#include "SensorArray.h"
+
 String nodeName = "BHRIGU"; // 6 char EXACTLY
 
+SensorArray _sensorArray;
 /*
 Obtain brightness readings (lux) using TSL2591 sensor
 and publish to MQTT broker.
@@ -9,7 +12,7 @@ and publish to MQTT broker.
 #include <Adafruit_Sensor.h>
 #include <Adafruit_TSL2591.h>
 
-Adafruit_TSL2591 _tsl(2591);
+///////// Adafruit_TSL2591 _tsl(2591);
 /*
 Display a message received by subscriber to OLED.
 This section has the Adafruit libraries and setup instructions
@@ -85,13 +88,13 @@ unsigned long tic = millis();
 WiFiClient WiFiClient;
 PubSubClient MosquittoClient(WiFiClient);
 
-void configureLuxMeter() {
-  /*
-  COnfigure the TSL2591 lux sensor for use.
-  */
-  _tsl.setGain(TSL2591_GAIN_MED);
-  _tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
-}
+// void configureLuxMeter() {
+//   /*
+//   COnfigure the TSL2591 lux sensor for use.
+//   */
+//   _tsl.setGain(TSL2591_GAIN_MED);
+//   _tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+// }
 
 void displayMessage(String mess) {
   /*
@@ -131,14 +134,19 @@ void mosquittoDo(char* topic, byte* payload, unsigned int length) {
 void setup() {
   // Start the serial bus
   Serial.begin(9600);
+  while (!Serial) {
+    // Stabilize the serial commuincations bus.
 
-  // Start the lux sensor
-  if (_tsl.begin()) {
-    Serial.println("Sensor ready!");
-  } else {
-    Serial.println("Found no sensor.");
   }
-  configureLuxMeter();
+  delay(999);
+  // Start the lux sensor
+  _sensorArray.start_tsl();
+  // if (_tsl.begin()) {
+  //   Serial.println("Sensor ready!");
+  // } else {
+  //   Serial.println("Found no sensor.");
+  // }
+  // configureLuxMeter();
 
   // Start the ADC
   _mcp.begin();
@@ -190,7 +198,7 @@ void reconnect() {
   2. "VASISH", "whatsup_nerds", NULL
   */
   while (!MosquittoClient.connected()) {
-    if (MosquittoClient.connect("BHRIGU", "whatsup_nerds", NULL)) {
+    if (MosquittoClient.connect("nodemcu1", "fire_up_your_neurons", NULL)) {
       Serial.println("Uh-Kay!");
       MosquittoClient.subscribe("Test"); // SUBSCRIBE TO TOPIC
     } else {
@@ -226,7 +234,8 @@ String makeMessage() {
   /*
   Read the brightness level reported by TSL2591X on I2C bus.
   */
-  brightness = _tsl.getLuminosity(TSL2591_VISIBLE);
+  // brightness = _tsl.getLuminosity(TSL2591_VISIBLE);
+  brightness = _sensorArray.get_tsl_visibleLight(true);
   float brightnessReading = brightness * 100.0 / 65535.0;
   char brightnessDisplay[7];
   dtostrf(brightnessReading, 6, 2, brightnessDisplay);
@@ -241,7 +250,7 @@ String makeMessage() {
 }
 
 void publish_message() {
-  String msg_payload = makeMessage(); // "Namaste from India";
+  String msg_payload = "Namaste!"; // makeMessage(); // "Namaste from India";
   char char_buffer[128];
   msg_payload.toCharArray(char_buffer, 128);
   MosquittoClient.publish("Test", char_buffer);
