@@ -2,3 +2,4 @@
 #define PIN_POT A0           // Input pin for the potentiometer
 #define onboard_led 16       // D0 ~ GPIO16
 #define DALLAS_TEMPERATURE 0 // D3 ~ GPIO0 for one-wire sensor
+#define PIN_DHT22 D4         // D4 ~ GPIO2 

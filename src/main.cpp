@@ -14,11 +14,13 @@ and publish to MQTT broker.
 
 SensorArray _sensorArray; // Array of sensors
 
-uint16_t brightness = 0;  // Value read from lux sensor
-int waterLevel = 0;       // Value read from water-level sensor
-int potValue;             // Value read from the pot
-float tempInC;            // Temperature read from ds18b20 "Dallas"
-int pubInterval;          // Time interval for recurring writes to broker
+uint16_t brightness = 0;    // Value read from lux sensor
+int waterLevel = 0;         // Value read from water-level sensor
+int potValue;               // Value read from the pot
+float tempInC;              // Temperature read from ds18b20 "Dallas"
+float RH;                   // Relative Humidity read from DHT22
+float TempF;                // Temperature Fahrenheit reported from DHT22
+long unsigned pubInterval;  // Time interval for recurring writes to broker
 
 /*
 Connect to MQTT broker over WiFi (Home Internet).
@@ -72,6 +74,8 @@ void setup() {
     // Stabilize the serial commuincations bus.
   }
   delay(999);
+  // Start the humidity/temperature sensor (DHT22)
+  _sensorArray.start_dht22();
   // Start the temperature sensor (Dallas)
   _sensorArray.start_ds18b20(DALLAS_TEMPERATURE);
   // Start the lux sensor
@@ -162,11 +166,22 @@ String makeMessage() {
   char tempInCDisplay[7];
   dtostrf(tempInC, 6, 2, tempInCDisplay); 
   /*
+  Read the relative humidity and temperature reported by DHT22.
+  */
+  RH = _sensorArray.get_dht_humidity();
+  TempF = _sensorArray.get_dht_temperature(FAHRENHEIT);
+  if (isnan(RH) || isnan(TempF)) {
+    RH = -99.99;
+    TempF = -99.99;
+  }
+  char RHDisplay[7];
+  dtostrf(RH, 6, 2, RHDisplay);
+  /*
   Make the message to publish to the MQTT broker as
   serialized JSON. 
   */
-  char readOut[78];
-  snprintf(readOut, 78, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s,\"TempC\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay, tempInCDisplay);
+  char readOut[90];
+  snprintf(readOut, 90, "{\"Name\":\"%6s\",\"Pot\":%6s,\"Level\":%6s,\"Lux\":%6s,\"TempC\":%6s,\"RH\":%6s}", nodeName.c_str(), potDisplay, waterLevelDisplay, brightnessDisplay, tempInCDisplay, RHDisplay);
   _sensorArray.displayMessage(readOut);
   return readOut; // Note 128 char limit on messages.
 }

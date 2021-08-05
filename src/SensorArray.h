@@ -1,6 +1,11 @@
 #ifndef SENSOR_ARRAY_H
 #define SENSOR_ARRAY_H
 
+#include "PinNumbers.h"
+#include <DHT.h>
+
+#define DHT_TYPE DHT22
+
 #include <DallasTemperature.h>
 #include "Temperature.h"
 
@@ -22,6 +27,12 @@ class SensorArray
     public:
         SensorArray();
 
+        void start_dht22();
+        float _last_dht_RH;
+        float _last_dht_temperature;
+        float get_dht_humidity(bool=true);
+        float get_dht_temperature(enum temperatureUnit, bool=true);
+
         void start_ds18b20(uint8_t);
         float get_ds18b20_temperature(enum temperatureUnit);
 
@@ -39,6 +50,8 @@ class SensorArray
         float get_tsl_lux(bool=true);
 
     private:
+        DHT _dht = DHT(PIN_DHT22, DHT_TYPE);
+
         Temperature _temperature;
         OneWire _oneWire = OneWire(0);
         DallasTemperature _ds18b20 = DallasTemperature();
@@ -50,7 +63,6 @@ class SensorArray
 
         uint32_t _last_tsl_luminosity;
         Adafruit_TSL2591 _tsl = Adafruit_TSL2591(2591);
-
 };
 #endif
 

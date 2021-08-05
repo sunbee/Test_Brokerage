@@ -7,6 +7,29 @@ SensorArray::SensorArray() {
 
 };
 
+void SensorArray::start_dht22() {
+    this->_dht.begin();
+}
+
+float SensorArray::get_dht_humidity(bool liveReading) {
+    if (liveReading) {
+        this->_last_dht_RH = this->_dht.readHumidity();
+    }
+    return this->_last_dht_RH;
+}
+
+float SensorArray::get_dht_temperature(enum temperatureUnit unit, bool liveReading) {
+    float returnValue;
+    if (liveReading) {
+        this->_last_dht_temperature = this->_dht.readTemperature();
+    }
+    returnValue = this->_last_dht_temperature;
+    if (unit == FAHRENHEIT) {
+        returnValue = this->_temperature.convertCtoF(returnValue);
+    }
+    return returnValue;
+}
+
 void SensorArray::start_ds18b20(uint8_t temperaturePin) {
     this->_oneWire.begin(temperaturePin);
     this->_ds18b20.setOneWire(&this->_oneWire);
