@@ -1,6 +1,17 @@
 #ifndef SENSOR_ARRAY_H
 #define SENSOR_ARRAY_H
 
+/*
+For each sensor or device in the array,
+1. Include the library (e.g. Adafruit's)
+2. Create an instance of the sensor class
+3. Declare the start_me method prototype
+4. Declare the get method prototype
+5. Declare an optional last value.
+Then implement the prototypes in the cpp file,
+accessing the instance with this->me.
+*/
+
 #include "PinNumbers.h"
 #include <DHT.h>
 
@@ -105,4 +116,11 @@ in order to use the OLED display.
 Obtain temperature readings from the ds18b20 "Dallas" temperature sensor
 over the one-wire protocol. This protocol requires only a digital pin and
 we have used pin D3 (GPIO0) on the nodemcu.
+*/
+
+/*
+Obtain temperature and relative humidity from the DHT22 sensor 
+over the one-wire protocol. This is a finicky sensor and may return 
+nan-values until ready. Provision is made to report -99.99 
+when this happens. 
 */
