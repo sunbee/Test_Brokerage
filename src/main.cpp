@@ -74,6 +74,10 @@ void setup() {
     // Stabilize the serial commuincations bus.
   }
   delay(999);
+  /*
+  Invoke the start method of each sensor or device 
+  in the sensor array (i.e. object of class SensorArray).
+  */
   // Start the humidity/temperature sensor (DHT22)
   _sensorArray.start_dht22();
   // Start the temperature sensor (Dallas)
@@ -141,6 +145,13 @@ void reconnect() {
 }
 
 String makeMessage() {
+  /* 
+  Invoke the get methods implemented in class SensorArray 
+  for each sensor in the array to obtain sensor readings. 
+  Then convert each numeric value into a formatted string
+  for display and embed into serialized JSON payload for 
+  shipping to the MQTT broker.
+  */
   /*
   Read the pot on A0. 
   */
